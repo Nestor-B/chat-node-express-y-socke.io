@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            list-style: none;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .right {text-align: right;}
+        .left {text-align: left;}
+        #app {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            height: 100vh;
+        }
+        #app aside {
+            border-right: 1px solid #ccc;
+            padding: 5px;
+            /* background: rebeccapurple; */
+            overflow: hidden;
+        }
+        #app aside .header {
+            padding: 5px .0em 0 0;
+        }
+        #app aside .header div {
+            /* background: rgba(0, 0, 220, .1); */
+            padding: 1em 1.8em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            /* border-bottom: 1px solid #ccc; */
+        }
+        #app aside .search { 
+            margin: 10px 1em;
+        }
+        #app aside .container-friends { 
+            /* border-top: 1px solid #ccc; */
+            min-height: calc(100vh - 7em);
+            max-height: calc(100vh - 7em);
+            overflow-y: auto;
+        }
+        #app main .header {
+            border-bottom: 1px solid #ccc;
+            background: rgba(0, 0, 0, .1);
+            padding: 1.40em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        input[type="text"] {
+            background: rgba(225, 225, 225, .6);
+            padding: .80em;
+            border: 0;
+            width: 100%;
+        }
+        input[type="text"]:focus {
+            outline: 1px solid wheat;
+        }
+        .friends {
+            padding: 0 1em;
+            width: 100%;
+        }
+        .friends > div {
+            display: grid;
+            grid-template-columns: 1fr 50px;
+            padding: .50em;
+            margin: 5px 0;
+            cursor: pointer;
+            background: #f1efef;
+        }
+        .friends > div >div {display: flex;}
+        .friends div h4 { 
+            padding: 1em;
+            display: block;
+            width: 100%;
+            background: transparent !important;
+        }
+        .img-perfil {
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+        }
+        #app main {
+            min-height: 100vh;
+            max-height: 100vh;
+            overflow-y: hidden;
+        }
+        .content {
+            min-height: calc(100vh - 9em);
+            max-height: calc(100vh - 9em);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2em;
+        }
+        .chat {
+            /* height: 80vh !important; */
+            background: rgb(156, 223, 67);
+            padding: 1em;
+        }
+        .chat div p {
+            border-radius: 20px;
+        }
+        .listFriend {
+            background-color: rebeccapurple;
+            width: 100%;
+        }
+        [id*="n_"] {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transform: scale(.8);
+
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="app">
+        <aside>
+            <section class="header">
+                <div>
+                    <h2 id="nameUser"> <%=nameUser%> </h2>
+                    <span></span>
+                    <span onclick="getOut()">
+                        <svg class="svg-icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;cursor: pointer;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M768 106V184c97.2 76 160 194.8 160 328 0 229.6-186.4 416-416 416S96 741.6 96 512c0-133.2 62.8-251.6 160-328V106C121.6 190.8 32 341.2 32 512c0 265.2 214.8 480 480 480s480-214.8 480-480c0-170.8-89.6-321.2-224-406z" fill="" /><path d="M512 32c-17.6 0-32 14.4-32 32v448c0 17.6 14.4 32 32 32s32-14.4 32-32V64c0-17.6-14.4-32-32-32z" fill="" /></svg>
+                    </span>
+                </div>
+            </section>
+            <section class="search">
+                <input type="text">
+            </section>
+            <section class="container-friends">
+                <div class="friends" id="friends">
+                    <!-- <div> 
+                        <img class="img-perfil" src="n.jpg" alt=""> 
+                        <h4>Benjamin</h4>
+                    </div> -->
+                </div>
+            </section>
+        </aside>
+        <main>
+            <section class="header">
+                <h3 id="enChat">Amigo</h3>
+            </section>
+            <section class="content">
+                <div class="chat" id="chat"></div>
+            </section>
+            <div style="padding: 1em;">
+                <input style="padding: 1em;" type="text" placeholder="Escribe aqui ..." id="msg">
+            </div>
+        </main>
+    </div>
+
+    <input type="hidden" id="sessionID" readonly value=<%= sessionID %> />
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+
+    <script>
+        var socket = io()
+        var receptor = {}
+        var sessionID = $("#sessionID").val()
+        var nameUser = $("#nameUser").text()
+
+        $(window).on('load', () => {
+            socket.emit('join', {
+                sessionID,
+                nameUser,
+                photo: '',
+                receptor: '',
+                msg: $("#msg").val()
+            })
+
+            socket.on('list', (data) => {
+                $("#friends").html('')
+                data.forEach(element => {
+                    if( element.sessionID != sessionID ){
+                        $("#friends").append(`
+                            <div id=${'t_'+element.sessionID} class="listFriend left" title=${element.sessionID}> 
+                                <div>
+                                    <img class="img-perfil" src="n.jpg" alt=""> 
+                                    <h4>${element.nameUser}</h4>
+                                </div>
+                                <div id=${'n_'+element.sessionID}>0</div>
+                            </div>
+                        `)
+                        $("#friends").on('click', (event) => {
+                            if( event.target.innerText.trim() == element.nameUser.trim() ){
+                                if( receptor.sessionID != element.sessionID ) {
+                                    $("#chat").text('')
+                                }
+                                $("#enChat").text(element.nameUser)
+                                receptor = {...element}    
+                                $("#msg").focus()
+                                $("#n_"+element.sessionID).text('0').css({
+                                    color: 'transparent',
+                                    background: 'transparent'
+                                })
+                            }
+                        })
+                        $("#n_"+element.sessionID).css('color', 'transparent')
+                    }
+                });
+            })
+        })        
+
+        socket.on('msg', (data) => {  
+            if( data.receptor == receptor.sessionID ){
+                $("#chat").append(`<div>${data.msg}</div>`)
+            }else{
+                var msgPending = parseInt($("#n_"+data.receptor).text()) + 1
+                if(msgPending < 10){
+                    $("#n_"+data.receptor).text(msgPending)
+                }else{
+                    if(msgPending >= 9){
+                        $("#n_"+data.receptor).text('9+')
+                    }
+                }
+                $("#n_"+data.receptor).css({
+                    background: 'red',
+                    color: 'white',
+                    fontWeight: 'bold'
+                })
+            }
+        })
+        
+        $("#msg").on('keyup', () => {
+            event.keyCode === 13?(
+                $("#chat").append(`<div class="right">${$("#msg").val()}</div>`),
+                socket.emit('sendMsg', {
+                    id: receptor.sessionID,
+                    receptor: sessionID,
+                    msg: $("#msg").val()
+                }), $("#msg").val(''), $("#msg").focus()
+            ):null
+        })
+
+        function getOut(){
+            socket.emit('exit', sessionID)
+            location.href = '/logout'
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <style>
+        * {
+            margin: 0;
+            box-sizing: 0;
+            border: 1px solid;
+        }
+
+        .container {
+            height: 100vh;
+            background: #ccc;
+            width: 100%;
+        }
+
+        .container header {
+            padding: 1em;
+            position: relative;
+        }
+
+        .container .main {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            padding: 1em;
+            height: 80%;
+        }
+
+        .container .main aside {}
+
+        .container-chat {
+            height: 91.5%;
+            overflow-y: auto;
+            max-height: 91.5%;
+        }
+        #bienvenida {
+            position: absolute;
+            right: 1em;
+            top: 1em;
+            background: white;
+            padding: 1em;
+        }
+        #users div{
+            display: flex;
+            justify-content: space-between;
+            padding: 1em;
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <div class="container">
+        <header>
+            <div id="bienvenida"></div>
+            <button onclick="salir()">Salir</button>
+            <h1>Chat</h1>
+            <form onsubmit="return false">
+                <fieldset>
+                    <legend>Entrar:</legend>
+                    <label for="fname">Nombre de usuario:</label>
+                    <input type="text" id="user" name="fname" value=<%= nombreUser %>><br>
+                </fieldset>
+            </form>
+        </header>
+        <div class="main">
+            <aside>
+                <div id="users"></div>
+            </aside>
+            <main>
+                <div class="container-chat">
+                    <div id="chat"></div>
+                </div>
+                <form onsubmit="return false">
+                    <fieldset>
+                        <legend>Mensaje:</legend>
+                        <input type="text" id="msg" name="fname"><br>
+                    </fieldset>
+                </form>
+            </main>
+        </div>
+    </div>
+
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script>
+        console.log( this )
+
+        var socket = io()
+        var socket_id_friend = ''
+        var nameFriend = ''
+        var userList = []
+        var saveMsg = {}
+        
+        $(window).on('load', () => {
+            var valor = $("#user").val()
+            socket.emit('login', {
+                user: valor,
+                id: socket.id
+            })
+            $("#chat").attr("class", "me_" + socket.id)
+        })
+
+        socket.on('bienvenida', (e) => {
+            $("#bienvenida").text(e.user + ' se ha conectado!')
+            setTimeout(() => {
+                $("#bienvenida").text('')
+            }, 2500)
+        })
+
+        $("#msg").on("keyup", () => {
+            var valor = event.target.value
+            if (event.keyCode == 13 && valor) {
+                event.preventDefault()
+                socket.emit('sendMsg', {
+                    emisor: user.value,
+                    destinatario: nameFriend,
+                    msg: '<b>' + user.value + '</b> dice: ' + valor,
+                    id: socket_id_friend, 
+                    mid: socket.id,
+                    tiempo: Date.now()
+                })
+                $("#chat").append(`
+                    <p style='display:flex;justify-content: flex-end'> <b>Tu</b> dices: ${valor}</p>
+                `)
+            }            
+        })
+
+        function selectId(e) {
+            $('.f___' + e.id).css('color', 'black')
+            socket.emit('mysocket', e.id.replace('f___', ''))
+            socket.on('mysocket', (data) => { 
+                if(data === e.id.replace('f___', '')) {
+                    $('.notichat___' + data).html('')
+                }
+            })
+            socket_id_friend = e.id.replace('f___', '')
+            nameFriend = e.innerText
+            $('.me_' + socket.id).html('')
+        }
+        socket.on('userList', (e) => {
+            userList = e
+            $('#users').html('')
+            e.forEach(e => {
+                if (e.user != user.value) {
+                    $('#users').append(`
+                        <div>
+                            <p id=${'f___'+e.id} class=${'f___'+e.id} onclick="selectId(this)">
+                            ${e.user}
+                            <b data-value='0' class=${'notichat___'+e.id}></b>
+                            </p>
+                        </div>
+                    `)
+                }
+            });
+        })
+        socket.on('receiveMsg', (e) => {
+            if (e.emisor == nameFriend) {
+                $("#chat").append(`
+                    <p>${e.msg}</p>
+                `)
+            }else{
+                var noti = $('.notichat___' + e.mid)[0]
+                var valor = parseInt(noti.getAttribute('data-value')) + 1
+                noti.setAttribute('data-value', valor)
+                $('.notichat___' + e.mid).html(noti.getAttribute('data-value'))
+                
+            }
+        })
+        function salir(){
+            socket.emit('salir', user.value)
+            location.href = '/logout'
+        }
+    </script>
+
+</body>
+
+</html>
